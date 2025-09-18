@@ -3,11 +3,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   eslint: {
-    // Build sırasında ESLint hatalarını dikkate alma
+    // Lint hataları build’i durdurmasın
     ignoreDuringBuilds: true,
   },
   typescript: {
-    // Prod’da "any" gibi tip hataları yüzünden build’i bozma
+    // TypeScript hataları build’i durdurmasın
     ignoreBuildErrors: true,
   },
 };
