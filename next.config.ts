@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   eslint: {
-    // Lint hataları build’i durdurmasın
+    // Lint hataları build’i durdurmasın deneme
     ignoreDuringBuilds: true,
   },
   typescript: {
