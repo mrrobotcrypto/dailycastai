@@ -3,10 +3,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   eslint: {
-    ignoreDuringBuilds: true, // Lint hataları build’i durdurmasın
+    ignoreDuringBuilds: true, // Build sırasında ESLint hatalarını yoksay
   },
   typescript: {
-    ignoreBuildErrors: true, // TS hataları build’i durdurmasın
+    ignoreBuildErrors: true, // TS hatalarını yoksay
   },
   experimental: {
     appDir: true, // App Router açık
