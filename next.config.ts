@@ -13,4 +13,10 @@ const nextConfig: NextConfig = {
   },
 };
 
+const nextConfig = {
+  images: {
+    unoptimized: true, // Vercel’de optimize etme zorunluluğunu kapat
+  },
+};
+
 export default nextConfig;
