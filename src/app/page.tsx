@@ -5,6 +5,43 @@ import ImagePicker from '@/components/ImagePicker';
 import Logo from '@/components/Logo';
 import { UI, type Lang } from '@/lib/i18n';
 
+// ✅ ConnectWallet componenti inline olarak eklendi
+function ConnectWallet() {
+  const [connected, setConnected] = useState(false);
+  const [provider, setProvider] = useState("");
+
+  async function connectFarcaster() {
+    const res = await fetch("/api/siwn/start");
+    const { url } = await res.json();
+    window.location.href = url; // Farcaster login ekranına yönlendirme
+  }
+
+  async function connectCoinbase() {
+    alert("Coinbase Wallet entegrasyonu buraya gelecek.");
+  }
+
+  return (
+    <div className="flex justify-end mb-4">
+      {connected ? (
+        <span className="text-sm text-green-600">
+          ✅ {provider} connected
+        </span>
+      ) : (
+        <button
+          onClick={() =>
+            window.confirm("Farcaster ile bağlanılsın mı?")
+              ? (setProvider("Farcaster"), connectFarcaster())
+              : (setProvider("Coinbase"), connectCoinbase())
+          }
+          className="rounded-xl bg-violet-600 px-4 py-2 text-white font-semibold"
+        >
+          Connect Wallet
+        </button>
+      )}
+    </div>
+  );
+}
+
 const TONES = ["plain", "witty", "professional"] as const;
 const STYLES = ["photo-realistic", "illustration", "3D", "minimal"] as const;
 
@@ -44,11 +81,9 @@ export default function Mini() {
     setImageUrl("");
     setText("");
     setError("");
-    // küçük bir tik ile odak
     setTimeout(() => topicRef.current?.focus(), 0);
   }
 
-  // DİL DEĞİŞİNCE HER ŞEY SIFIRLANSIN
   useEffect(() => { resetForm(); }, [lang]);
 
   function applyPreset(p: {label: string; topic: string; tone?: typeof TONES[number]}) {
@@ -86,6 +121,9 @@ export default function Mini() {
 
   return (
     <main className="mx-auto max-w-[720px] p-6">
+      {/* ✅ Wallet bağlama */}
+      <ConnectWallet />
+
       {/* Dil seçici + başlık */}
       <header className="text-center mb-6">
         <div className="flex justify-center mb-3">
@@ -154,7 +192,6 @@ export default function Mini() {
           </div>
         </div>
 
-        {/* DİKKAT: lang değişince iç state de sıfırlansın diye key veriyoruz */}
         <ImagePicker key={lang} value={imageUrl} onChange={setImageUrl} lang={lang} />
 
         <button onClick={generate} disabled={loading || !topic}
@@ -187,14 +224,12 @@ export default function Mini() {
         )}
       </section>
 
-{/* Footer */}
-<footer className="mt-10 pb-4 text-center text-xs text-zinc-500">
-  <span>&copy; {new Date().getFullYear()} MrRobotCrypto</span>
-  <span className="mx-2">•</span>
-  <span>v1</span>
-</footer>
-
-
+      {/* Footer */}
+      <footer className="mt-10 pb-4 text-center text-xs text-zinc-500">
+        <span>&copy; {new Date().getFullYear()} MrRobotCrypto</span>
+        <span className="mx-2">•</span>
+        <span>v1</span>
+      </footer>
     </main>
   );
 }
