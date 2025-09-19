@@ -9,27 +9,63 @@ import { UI, type Lang } from '@/lib/i18n';
 function ConnectWallet() {
   const [connected, setConnected] = useState(false);
   const [provider, setProvider] = useState("");
+  const [address, setAddress] = useState(""); // ✅ cüzdan adresi
 
   async function connectFarcaster() {
-    const res = await fetch("/api/siwn/start");
-    const { url } = await res.json();
-    window.location.href = url; // Farcaster login ekranına yönlendirme
-    setConnected(true);
-    setProvider("Farcaster");
+    try {
+      const res = await fetch("/api/siwn/start");
+      const { url } = await res.json();
+      window.location.href = url; // login sayfasına yönlendir
+    } catch (e) {
+      alert("Bağlantı hatası: " + (e as Error).message);
+    }
   }
 
   async function connectCoinbase() {
     alert("Coinbase Wallet entegrasyonu buraya gelecek.");
-    setConnected(true);
-    setProvider("Coinbase");
   }
 
+  function disconnect() {
+    setConnected(false);
+    setProvider("");
+    setAddress("");
+    localStorage.removeItem("user"); // saklanan bilgiyi temizle
+  }
+
+  // ✅ callback’ten dönen user bilgisini kontrol et
+  useEffect(() => {
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      const u = JSON.parse(stored);
+      setConnected(true);
+      setProvider("Farcaster");
+      setAddress(u.fid || u.address || "0x...");
+    }
+  }, []);
+
   return (
-    <div className="flex justify-end mb-4">
+    <div className="flex justify-between items-center mb-4">
       {connected ? (
-        <span className="text-sm text-green-600">
-          ✅ {provider} connected
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-green-600">
+            ✅ {provider} connected
+          </span>
+          <span className="text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded">
+            {address.slice(0, 6)}...{address.slice(-4)}
+          </span>
+          {/* Menü */}
+          <div className="relative group">
+            <button className="px-3 py-1 bg-gray-200 rounded">☰</button>
+            <div className="absolute right-0 mt-1 hidden group-hover:block bg-white border rounded shadow">
+              <button
+                onClick={disconnect}
+                className="px-4 py-2 text-red-600 hover:bg-gray-100 w-full text-left"
+              >
+                Disconnect
+              </button>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="flex gap-2">
           <button

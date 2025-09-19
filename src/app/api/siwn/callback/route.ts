@@ -1,31 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextApiRequest, NextApiResponse } from "next";
+import { NeynarSIWNClient } from "@neynar/nodejs-sdk";
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const code = searchParams.get("code");
+const client = new NeynarSIWNClient(process.env.NEYNAR_API_KEY!);
 
-  if (!code) {
-    return NextResponse.json({ error: "No code received" }, { status: 400 });
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    const { code } = req.query; // Farcaster callback -> buradan code gelir
+    if (!code) throw new Error("Missing code");
+
+    const { user, signer_token } = await client.validateLogin(code as string);
+
+    // Kullanıcı bilgilerini session’a kaydet
+    // 👇 Örn. cookie’ye veya db’ye
+    res.setHeader("Set-Cookie", `fid=${user.fid}; Path=/; HttpOnly`);
+
+    // ✅ Doğru yönlendirme
+    res.redirect("/");
+  } catch (e: any) {
+    console.error("Callback error:", e);
+    res.status(400).send("Callback failed: " + e.message);
   }
-
-  const res = await fetch("https://api.neynar.com/v2/oauth/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: process.env.NEXT_PUBLIC_NEYNAR_CLIENT_ID,
-      client_secret: process.env.NEYNAR_API_KEY,
-      grant_type: "authorization_code",
-      redirect_uri: `${process.env.NEXT_PUBLIC_SITE_URL}/api/siwn/callback`,
-      code,
-    }),
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    return NextResponse.json({ error: data.error_description }, { status: 400 });
-  }
-
-  // access token & user bilgileri döner
-  return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/?fid=${data.user.fid}`);
 }
