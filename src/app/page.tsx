@@ -14,10 +14,14 @@ function ConnectWallet() {
     const res = await fetch("/api/siwn/start");
     const { url } = await res.json();
     window.location.href = url; // Farcaster login ekranına yönlendirme
+    setConnected(true);
+    setProvider("Farcaster");
   }
 
   async function connectCoinbase() {
     alert("Coinbase Wallet entegrasyonu buraya gelecek.");
+    setConnected(true);
+    setProvider("Coinbase");
   }
 
   return (
@@ -27,16 +31,20 @@ function ConnectWallet() {
           ✅ {provider} connected
         </span>
       ) : (
-        <button
-          onClick={() =>
-            window.confirm("Farcaster ile bağlanılsın mı?")
-              ? (setProvider("Farcaster"), connectFarcaster())
-              : (setProvider("Coinbase"), connectCoinbase())
-          }
-          className="rounded-xl bg-violet-600 px-4 py-2 text-white font-semibold"
-        >
-          Connect Wallet
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={connectFarcaster}
+            className="rounded-xl bg-violet-600 px-4 py-2 text-white font-semibold"
+          >
+            Farcaster
+          </button>
+          <button
+            onClick={connectCoinbase}
+            className="rounded-xl bg-purple-500 px-4 py-2 text-white font-semibold"
+          >
+            Coinbase
+          </button>
+        </div>
       )}
     </div>
   );
@@ -45,7 +53,7 @@ function ConnectWallet() {
 const TONES = ["plain", "witty", "professional"] as const;
 const STYLES = ["photo-realistic", "illustration", "3D", "minimal"] as const;
 
-export default function Mini() {
+export default function Home() {
   // Farcaster splash kapat
   useEffect(() => { (async () => { try { await sdk.actions.ready(); } catch {} })(); }, []);
 
@@ -70,10 +78,8 @@ export default function Mini() {
   const [imageUrl, setImageUrl] = useState("");
   const [error, setError] = useState("");
 
-  // inputa odak için ref
   const topicRef = useRef<HTMLInputElement>(null);
 
-  // tek noktadan reset
   function resetForm() {
     setTopic("");
     setTone("plain");
