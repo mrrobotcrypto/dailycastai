@@ -1,38 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionFromCookie } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   try {
     const { text, imageUrl } = await req.json();
+    if (!text) throw new Error("Missing text");
+
     const apiKey = process.env.NEYNAR_API_KEY!;
-
-    if (!text) throw new Error("Text is required");
-
-    const embeds: { url: string }[] = [];
-    if (imageUrl?.startsWith("http")) {
-      embeds.push({ url: imageUrl });
+    const session = getSessionFromCookie();
+    if (!session?.signer_uuid) {
+      throw new Error("Not signed in");
     }
 
-    const body = {
-      text,
-      embeds,
-    };
+    const embeds: any[] = [];
+    if (imageUrl?.startsWith("http")) embeds.push({ url: imageUrl });
 
     const res = await fetch("https://api.neynar.com/v2/farcaster/cast", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "api_key": apiKey, // dikkat: x-api-key değil api_key
+        "content-type": "application/json",
+        "x-api-key": apiKey,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        signer_uuid: session.signer_uuid,
+        text,
+        embeds,
+      }),
     });
 
     const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data?.message || "Neynar API error");
+    if (!res.ok || !data?.cast?.hash) {
+      throw new Error(data?.message || "Cast API error");
     }
 
-    return NextResponse.json({ ok: true, data });
+    return NextResponse.json({ ok: true, hash: data.cast.hash });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 });
   }

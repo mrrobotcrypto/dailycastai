@@ -5,95 +5,137 @@ import ImagePicker from '@/components/ImagePicker';
 import Logo from '@/components/Logo';
 import { UI, type Lang } from '@/lib/i18n';
 
-// ✅ ConnectWallet componenti inline olarak eklendi
+type Me = {
+  session: {
+    fid: number;
+    username?: string;
+    display_address?: string;
+  } | null;
+};
+
+// ===== WALLET UI =====
 function ConnectWallet() {
-  const [connected, setConnected] = useState(false);
-  const [provider, setProvider] = useState("");
-  const [address, setAddress] = useState(""); // ✅ cüzdan adresi
+  const [me, setMe] = useState<Me["session"]>(null);
+  const [open, setOpen] = useState(false); // modal
 
-  async function connectFarcaster() {
+  async function refreshMe() {
     try {
-      const res = await fetch("/api/siwn/start");
-      const { url } = await res.json();
-      window.location.href = url; // login sayfasına yönlendir
-    } catch (e) {
-      alert("Bağlantı hatası: " + (e as Error).message);
-    }
+      const r = await fetch("/api/me", { cache: "no-store" });
+      const j: Me = await r.json();
+      setMe(j.session);
+    } catch {}
   }
 
-  async function connectCoinbase() {
-    alert("Coinbase Wallet entegrasyonu buraya gelecek.");
-  }
-
-  function disconnect() {
-    setConnected(false);
-    setProvider("");
-    setAddress("");
-    localStorage.removeItem("user"); // saklanan bilgiyi temizle
-  }
-
-  // ✅ callback’ten dönen user bilgisini kontrol et
   useEffect(() => {
-    const stored = localStorage.getItem("user");
-    if (stored) {
-      const u = JSON.parse(stored);
-      setConnected(true);
-      setProvider("Farcaster");
-      setAddress(u.fid || u.address || "0x...");
+    refreshMe();
+    // Neynar dönüşünde ?signedIn=1 varsa temizle & me çek
+    if (typeof window !== "undefined" && window.location.search.includes("signedIn=1")) {
+      const u = new URL(window.location.href);
+      u.searchParams.delete("signedIn");
+      window.history.replaceState({}, "", u.toString());
     }
   }, []);
 
+  async function startSiwn() {
+    const returnTo = typeof window !== "undefined" ? window.location.pathname : "/";
+    const r = await fetch(`/api/siwn/start?returnTo=${encodeURIComponent(returnTo)}`);
+    const j = await r.json();
+    if (j.url) window.location.assign(j.url);
+    else alert(j.error || "Unable to start SIWN");
+  }
+
+  async function disconnect() {
+    await fetch("/api/logout", { method: "POST" });
+    setMe(null);
+    setOpen(false);
+  }
+
+  // Sağ üstteki buton
   return (
-    <div className="flex justify-between items-center mb-4">
-      {connected ? (
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-green-600">
-            ✅ {provider} connected
-          </span>
-          <span className="text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded">
-            {address.slice(0, 6)}...{address.slice(-4)}
-          </span>
-          {/* Menü */}
-          <div className="relative group">
-            <button className="px-3 py-1 bg-gray-200 rounded">☰</button>
-            <div className="absolute right-0 mt-1 hidden group-hover:block bg-white border rounded shadow">
+    <div className="flex justify-end mb-4">
+      {/* Bağlıysa kısaltılmış adres + menü */}
+      {me ? (
+        <div className="relative">
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="flex items-center gap-2 rounded-xl border border-violet-300 bg-white px-3 py-2 text-violet-700"
+          >
+            <span className="hidden sm:inline">Wallet Connected</span>
+            <span className="font-mono">{me.display_address || me.username || `fid:${me.fid}`}</span>
+            <span className="text-violet-500">▾</span>
+          </button>
+
+          {open && (
+            <div className="absolute right-0 mt-2 w-64 rounded-xl border border-violet-200 bg-white shadow-lg p-3 z-20">
+              <div className="text-sm text-zinc-600">Connected with Farcaster</div>
+              <div className="mt-1 font-mono text-zinc-800">
+                {me.display_address || me.username || `fid:${me.fid}`}
+              </div>
               <button
                 onClick={disconnect}
-                className="px-4 py-2 text-red-600 hover:bg-gray-100 w-full text-left"
+                className="mt-3 w-full rounded-lg bg-red-600 hover:bg-red-700 text-white py-2 font-semibold"
               >
-                Disconnect
+                Disconnect Wallet
               </button>
             </div>
-          </div>
+          )}
         </div>
       ) : (
-        <div className="flex gap-2">
+        // Bağlı değilse: Connect Wallet butonu (modal açar)
+        <div>
           <button
-            onClick={connectFarcaster}
+            onClick={() => setOpen(true)}
             className="rounded-xl bg-violet-600 px-4 py-2 text-white font-semibold"
           >
-            Farcaster
+            Connect Wallet
           </button>
-          <button
-            onClick={connectCoinbase}
-            className="rounded-xl bg-purple-500 px-4 py-2 text-white font-semibold"
-          >
-            Coinbase
-          </button>
+
+          {open && (
+            <div className="fixed inset-0 z-30 grid place-items-center bg-black/40">
+              <div className="w-[90%] max-w-md rounded-2xl bg-white p-5">
+                <div className="text-lg font-semibold mb-3">Connect Your Wallet</div>
+                <p className="text-sm text-zinc-600 mb-4">
+                  Choose a wallet to connect and access the platform
+                </p>
+                <div
+                  onClick={startSiwn}
+                  className="cursor-pointer rounded-xl border-2 border-violet-300 p-4 mb-3 hover:border-violet-500"
+                >
+                  <div className="font-semibold">Farcaster</div>
+                  <div className="text-sm text-zinc-600">Connect wallet</div>
+                </div>
+
+                <div
+                  onClick={() => alert("Coinbase Wallet entegrasyonu yakında.")}
+                  className="cursor-pointer rounded-xl border-2 border-violet-300 p-4 hover:border-violet-500"
+                >
+                  <div className="font-semibold">Coinbase Wallet</div>
+                  <div className="text-sm text-zinc-600">Connect using Coinbase Wallet</div>
+                </div>
+
+                <button
+                  className="mt-4 w-full rounded-xl border border-zinc-300 py-2"
+                  onClick={() => setOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
+// ===== SAYFA =====
+
 const TONES = ["plain", "witty", "professional"] as const;
 const STYLES = ["photo-realistic", "illustration", "3D", "minimal"] as const;
 
 export default function Home() {
-  // Farcaster splash kapat
   useEffect(() => { (async () => { try { await sdk.actions.ready(); } catch {} })(); }, []);
 
-  // Dil (localStorage ile kalıcı)
   const [lang, setLang] = useState<Lang>("tr");
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? (localStorage.getItem('dcai_lang') as Lang | null) : null;
@@ -125,7 +167,6 @@ export default function Home() {
     setError("");
     setTimeout(() => topicRef.current?.focus(), 0);
   }
-
   useEffect(() => { resetForm(); }, [lang]);
 
   function applyPreset(p: {label: string; topic: string; tone?: typeof TONES[number]}) {
@@ -163,7 +204,7 @@ export default function Home() {
 
   return (
     <main className="mx-auto max-w-[720px] p-6">
-      {/* ✅ Wallet bağlama */}
+      {/* Wallet bölümü */}
       <ConnectWallet />
 
       {/* Dil seçici + başlık */}
@@ -219,7 +260,7 @@ export default function Home() {
                          rounded-xl px-3 py-2 bg-white text-black"
               value={tone} onChange={e=>setTone(e.target.value as any)}
             >
-              {TONES.map((x)=> <option key={x} value={x}>{UI[lang].tones[x]}</option>)}
+              {["plain","witty","professional"].map((x)=> <option key={x} value={x}>{UI[lang].tones[x as any]}</option>)}
             </select>
           </div>
           <div>
@@ -229,7 +270,7 @@ export default function Home() {
                          rounded-xl px-3 py-2 bg-white text-black"
               value={style} onChange={e=>setStyle(e.target.value as any)}
             >
-              {STYLES.map((x)=> <option key={x} value={x}>{UI[lang].styles[x]}</option>)}
+              {["photo-realistic","illustration","3D","minimal"].map((x)=> <option key={x} value={x}>{UI[lang].styles[x as any]}</option>)}
             </select>
           </div>
         </div>
@@ -266,7 +307,6 @@ export default function Home() {
         )}
       </section>
 
-      {/* Footer */}
       <footer className="mt-10 pb-4 text-center text-xs text-zinc-500">
         <span>&copy; {new Date().getFullYear()} MrRobotCrypto</span>
         <span className="mx-2">•</span>
